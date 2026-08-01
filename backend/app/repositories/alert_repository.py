@@ -48,5 +48,31 @@ class AlertRepository(BaseRepository[Alert]):
         """Total alert count for a device."""
         return db.query(Alert).filter(Alert.device_id == device_id).count()
 
+    def get_unresolved_for_user(self, db: Session, user_id: int, limit: int = 100) -> List[Alert]:
+        """Return all unresolved alerts for devices owned by the given user."""
+        from app.models.device import Device
+        return (
+            db.query(Alert)
+            .join(Device, Alert.device_id == Device.id)
+            .filter(Device.owner_id == user_id, Alert.is_resolved == False)  # noqa: E712
+            .order_by(desc(Alert.created_at))
+            .limit(limit)
+            .all()
+        )
+
+    def resolve_all_for_user(self, db: Session, user_id: int) -> int:
+        """Resolve all unresolved alerts for devices owned by user. Returns count resolved."""
+        alerts = self.get_unresolved_for_user(db, user_id, limit=500)
+        count = 0
+        now = datetime.now(timezone.utc)
+        for alert in alerts:
+            alert.is_resolved = True
+            alert.resolved_at = now
+            db.add(alert)
+            count += 1
+        db.commit()
+        return count
+
 
 alert_repository = AlertRepository()
+

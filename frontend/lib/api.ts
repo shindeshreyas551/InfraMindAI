@@ -118,9 +118,25 @@ export async function getUnresolvedAlerts(uuid: string) {
   return apiFetch<AlertListResponse>(`/alerts/${uuid}/unresolved`);
 }
 
+export async function getUserUnresolvedAlerts() {
+  return apiFetch<Alert[]>("/alerts/user/unresolved");
+}
+
 export async function resolveAlert(alertId: number) {
   return apiFetch(`/alerts/${alertId}/resolve`, { method: "POST" });
 }
+
+export async function resolveAllUserAlerts() {
+  return apiFetch<{ status: string; resolved_count: number }>("/alerts/user/resolve-all", { method: "POST" });
+}
+
+export async function triggerTestAlert(deviceUuid?: string, alertType = "suspicious_process") {
+  const query = new URLSearchParams();
+  if (deviceUuid) query.append("device_uuid", deviceUuid);
+  query.append("alert_type", alertType);
+  return apiFetch<Alert>(`/alerts/test?${query.toString()}`, { method: "POST" });
+}
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface Device {

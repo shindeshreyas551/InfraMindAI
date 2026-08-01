@@ -32,12 +32,13 @@ from app.schemas.alert import AlertCreate, AlertListResponse, AlertOut
 
 # ── Threshold configuration ───────────────────────────────────────────────────
 class Thresholds:
-    CPU_WARNING: float = 85.0
-    CPU_CRITICAL: float = 95.0
-    RAM_WARNING: float = 80.0
-    RAM_CRITICAL: float = 90.0
-    DISK_WARNING: float = 85.0
-    DISK_CRITICAL: float = 95.0
+    CPU_WARNING: float = 75.0
+    CPU_CRITICAL: float = 90.0
+    RAM_WARNING: float = 75.0
+    RAM_CRITICAL: float = 85.0
+    DISK_WARNING: float = 80.0
+    DISK_CRITICAL: float = 90.0
+
 
 
 # ── Threshold engine ──────────────────────────────────────────────────────────
@@ -159,3 +160,97 @@ def get_device_alerts(
     alerts = alert_repository.get_for_device(db, device.id, only_unresolved=only_unresolved, limit=limit)
     total = alert_repository.count_for_device(db, device.id)
     return AlertListResponse(device_id=device.id, total=total, alerts=alerts)
+
+
+def get_user_unresolved_alerts(db: Session, user_id: int) -> List[Alert]:
+    """Get all unresolved alerts across all devices owned by the given user."""
+    return alert_repository.get_unresolved_for_user(db, user_id, limit=200)
+
+
+def resolve_all_user_alerts(db: Session, user_id: int) -> int:
+    """Resolve all active unresolved alerts for the given user."""
+    return alert_repository.resolve_all_for_user(db, user_id)
+
+
+def trigger_test_alert(
+    db: Session,
+    user_id: int,
+    device_uuid: Optional[str] = None,
+    alert_type: str = "suspicious_process",
+) -> Alert:
+    """
+    Simulate a security anomaly / alert for testing real-time notifications.
+    """
+    from app.repositories.device_repository import device_repository
+    user_devices = device_repository.get_all_by_user(db, user_id)
+    if not user_devices:
+        raise HTTPException(status_code=400, detail="No devices found for this user to trigger a test alert.")
+
+    target_device = None
+    if device_uuid:
+        target_device = device_repository.get_by_uuid(db, device_uuid)
+    if not target_device:
+        target_device = user_devices[0]
+
+    templates = {
+        "suspicious_process": (
+            "warning",
+            "Suspicious Process Heuristic Triggered: temp_updater.pdf.exe",
+            "Security Heuristic Warning: Unsigned binary running from %APPDATA%\\Local\\Temp with double extension (.pdf.exe). PID: 9842.",
+        ),
+        "high_cpu": (
+            "critical",
+            "Critical CPU Spike: 98.4%",
+            "System CPU usage spiked to 98.4% across 8 cores. Potential crypto-mining process or runaway thread detected.",
+        ),
+        "high_memory": (
+            "warning",
+            "High RAM Memory Consumption: 91.2%",
+            "System physical memory usage exceeded 90% (14.6 GB / 16.0 GB). Endpoint performance degraded.",
+        ),
+        "ransomware_heuristic": (
+            "critical",
+            "CRITICAL SECURITY ANOMALY: Mass File Encryption Activity",
+            "Anomaly Engine Alert: Rapid file modification rate detected in C:\\Users\\Documents\\. Cryptographic ransomware behavioral signature flagged!",
+        ),
+    }
+
+    severity, title, message = templates.get(
+        alert_type,
+        templates["suspicious_process"],
+    )
+
+    alert = Alert(
+        device_id=target_device.id,
+        severity=severity,
+        title=title,
+        message=message,
+    )
+    created = alert_repository.create(db, obj=alert)
+
+    # Broadcast immediately to active WebSocket subscribers
+    try:
+        import asyncio
+        from app.api.v1.endpoints.ws import ws_manager
+        from app.core.event_loop import get_main_loop
+        loop = get_main_loop()
+        if loop and not loop.is_closed():
+            alert_dict = {
+                "type": "alert",
+                "device_uuid": target_device.device_uuid,
+                "id": created.id,
+                "severity": created.severity,
+                "title": created.title,
+                "message": created.message,
+                "is_resolved": created.is_resolved,
+                "created_at": created.created_at.isoformat() if created.created_at else None,
+            }
+            asyncio.run_coroutine_threadsafe(
+                ws_manager.broadcast(target_device.device_uuid, alert_dict),
+                loop,
+            )
+    except Exception:
+        pass
+
+    return created
+

@@ -5,7 +5,7 @@ import { tokenStore } from "@/lib/api";
 const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/api/v1/ws";
 
 export interface LiveMetric {
-  type: "metric" | "ping";
+  type: "metric" | "alert" | "ping";
   device_uuid?: string;
   id?: number;
   collected_at?: string;
@@ -20,11 +20,19 @@ export interface LiveMetric {
   total_processes?: number;
   suspicious_process_count?: number;
   uptime_seconds?: number;
+
+  // Alert fields
+  severity?: "info" | "warning" | "critical";
+  title?: string;
+  message?: string;
+  is_resolved?: boolean;
 }
 
-export function useLiveMetrics(deviceUuid: string) {
+export function useLiveMetrics(deviceUuid: string, onAlertReceived?: (alert: any) => void) {
   const [latest, setLatest] = useState<LiveMetric | null>(null);
+  const [latestAlert, setLatestAlert] = useState<LiveMetric | null>(null);
   const [connected, setConnected] = useState(false);
+
 
   // Use a ref for the WebSocket so we can close it imperatively
   const wsRef = useRef<WebSocket | null>(null);
@@ -61,7 +69,12 @@ export function useLiveMetrics(deviceUuid: string) {
       if (!mountedRef.current) return;
       try {
         const data: LiveMetric = JSON.parse(e.data);
-        if (data.type === "metric") setLatest(data);
+        if (data.type === "metric") {
+          setLatest(data);
+        } else if (data.type === "alert") {
+          setLatestAlert(data);
+          if (onAlertReceived) onAlertReceived(data);
+        }
       } catch {
         // Malformed JSON — ignore
       }
@@ -79,7 +92,7 @@ export function useLiveMetrics(deviceUuid: string) {
       // onerror always fires before onclose — just let onclose handle retry
       ws.close();
     };
-  }, [deviceUuid]);
+  }, [deviceUuid, onAlertReceived]);
 
   // Keep connectRef in sync with the latest connect function
   useEffect(() => {
@@ -101,5 +114,6 @@ export function useLiveMetrics(deviceUuid: string) {
     };
   }, [connect]);
 
-  return { latest, connected };
+  return { latest, latestAlert, connected };
 }
+

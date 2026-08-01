@@ -88,44 +88,63 @@ def ingest_metric(db: Session, payload: MetricIngest) -> Metric:
     )
     saved_metric = metric_repository.create(db, obj=metric)
 
-    # Evaluate thresholds and auto-generate alerts (non-blocking)
+    # Evaluate thresholds and auto-generate alerts
+    new_alerts = []
     try:
-        alert_service.evaluate_thresholds(db, device.id, saved_metric)
+        new_alerts = alert_service.evaluate_thresholds(db, device.id, saved_metric)
     except Exception:
         pass
 
     # Broadcast to WebSocket subscribers
-    # Python 3.10+: asyncio.get_event_loop() raises RuntimeError from a ThreadPoolExecutor
-    # thread. We use a pre-captured loop reference stored during app startup instead.
     try:
         from app.api.v1.endpoints.ws import ws_manager
-        if ws_manager.subscriber_count(payload.device_uuid) > 0:
-            metric_dict = {
-                "type": "metric",
-                "device_uuid": payload.device_uuid,
-                "id": saved_metric.id,
-                "collected_at": saved_metric.collected_at.isoformat() if saved_metric.collected_at else None,
-                "cpu_usage_percent": saved_metric.cpu_usage_percent,
-                "ram_usage_percent": saved_metric.ram_usage_percent,
-                "disk_usage_percent": saved_metric.disk_usage_percent,
-                "network_bytes_sent": saved_metric.network_bytes_sent,
-                "network_bytes_recv": saved_metric.network_bytes_recv,
-                "upload_speed_bps": saved_metric.upload_speed_bps,
-                "download_speed_bps": saved_metric.download_speed_bps,
-                "battery_percent": saved_metric.battery_percent,
-                "total_processes": saved_metric.total_processes,
-                "suspicious_process_count": saved_metric.suspicious_process_count,
-                "uptime_seconds": saved_metric.uptime_seconds,
-            }
-            from app.core.event_loop import get_main_loop
-            loop = get_main_loop()
-            if loop and not loop.is_closed():
+        from app.core.event_loop import get_main_loop
+        loop = get_main_loop()
+
+        if loop and not loop.is_closed():
+            # Broadcast metric snapshot
+            if ws_manager.subscriber_count(payload.device_uuid) > 0:
+                metric_dict = {
+                    "type": "metric",
+                    "device_uuid": payload.device_uuid,
+                    "id": saved_metric.id,
+                    "collected_at": saved_metric.collected_at.isoformat() if saved_metric.collected_at else None,
+                    "cpu_usage_percent": saved_metric.cpu_usage_percent,
+                    "ram_usage_percent": saved_metric.ram_usage_percent,
+                    "disk_usage_percent": saved_metric.disk_usage_percent,
+                    "network_bytes_sent": saved_metric.network_bytes_sent,
+                    "network_bytes_recv": saved_metric.network_bytes_recv,
+                    "upload_speed_bps": saved_metric.upload_speed_bps,
+                    "download_speed_bps": saved_metric.download_speed_bps,
+                    "battery_percent": saved_metric.battery_percent,
+                    "total_processes": saved_metric.total_processes,
+                    "suspicious_process_count": saved_metric.suspicious_process_count,
+                    "uptime_seconds": saved_metric.uptime_seconds,
+                }
                 asyncio.run_coroutine_threadsafe(
                     ws_manager.broadcast(payload.device_uuid, metric_dict),
                     loop,
                 )
+
+            # Broadcast any newly generated alerts
+            for alt in new_alerts:
+                alert_dict = {
+                    "type": "alert",
+                    "device_uuid": payload.device_uuid,
+                    "id": alt.id,
+                    "severity": alt.severity,
+                    "title": alt.title,
+                    "message": alt.message,
+                    "is_resolved": alt.is_resolved,
+                    "created_at": alt.created_at.isoformat() if alt.created_at else None,
+                }
+                asyncio.run_coroutine_threadsafe(
+                    ws_manager.broadcast(payload.device_uuid, alert_dict),
+                    loop,
+                )
     except Exception:
         pass
+
 
     return saved_metric
 
