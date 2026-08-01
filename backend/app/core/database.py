@@ -3,11 +3,11 @@ SQLAlchemy Database Engine, Session Factory & Dependency Injection
 for InfraMind AI FastAPI Backend.
 
 Design decisions:
-- Uses SQLAlchemy 2.x with the new `create_engine` / `sessionmaker` API.
+- Uses SQLAlchemy 2.x with `create_engine` / `sessionmaker` API targeting PostgreSQL.
 - `get_db()` is a FastAPI dependency that yields a session and always
   closes it — even on exception — preventing connection leaks.
 - `Base` is imported by all ORM models so Alembic can auto-discover them.
-- SQLite uses `check_same_thread=False` so FastAPI's async threads work.
+- Connection pooling with `pool_pre_ping=True` prevents stale connections in cloud environments like Render & Neon.
 """
 
 from contextlib import contextmanager
@@ -19,18 +19,15 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from app.core.config import settings
 
 
-# ── Engine creation ───────────────────────────────────────────────────────────
-connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    # SQLite needs this so multiple threads can share one connection
-    connect_args["check_same_thread"] = False
-
+# ── Engine creation (PostgreSQL) ─────────────────────────────────────────────
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args=connect_args,
     pool_pre_ping=True,   # Verify connections before use (avoids stale conn errors)
+    pool_size=10,         # Maintain up to 10 persistent connections
+    max_overflow=20,      # Allow up to 20 temporary connections beyond pool_size
     echo=False,           # Set to True for SQL query debugging
 )
+
 
 
 # ── Session factory ───────────────────────────────────────────────────────────

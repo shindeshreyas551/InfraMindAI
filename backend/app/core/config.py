@@ -29,13 +29,32 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24        # 1 day
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
-    DATABASE_URL: str = "sqlite:///./inframind.db"
+    DATABASE_URL: str
     RATE_LIMIT_PER_MINUTE: int = 10  # Per-IP rate limit on sensitive endpoints
 
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000"
     ]
+
+    @field_validator("DATABASE_URL", mode="before")
+    def validate_and_format_database_url(cls, v: Union[str, None]) -> str:
+        if not v or not isinstance(v, str) or not v.strip():
+            raise ValueError(
+                "DATABASE_URL environment variable is missing or empty. "
+                "A valid PostgreSQL connection string is required for production."
+            )
+        v = v.strip()
+        # Automatically convert legacy postgres:// protocol to postgresql:// for SQLAlchemy compatibility
+        if v.startswith("postgres://"):
+            v = "postgresql://" + v[11:]
+        # Fail immediately if an attempt is made to use SQLite
+        if v.startswith("sqlite"):
+            raise ValueError(
+                "SQLite is not supported in production. "
+                "Please configure a valid PostgreSQL connection string in DATABASE_URL."
+            )
+        return v
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
@@ -45,3 +64,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
