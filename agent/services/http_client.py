@@ -63,6 +63,28 @@ class BackendHTTPClient:
                 self._access_token = data["access_token"]
                 self.logger.info("Successfully authenticated with backend.")
                 return True
+            elif resp.status_code == 401:
+                # Agent account may not exist yet on fresh DB instance — attempt auto-registration
+                self.logger.info("Agent account not found. Attempting auto-registration...")
+                reg_resp = self._client.post(
+                    f"{self.base_url}/auth/register",
+                    json={
+                        "email": self.settings.backend_email,
+                        "password": self.settings.backend_password,
+                        "full_name": "InfraMind Monitoring Agent",
+                    },
+                )
+                if reg_resp.status_code in (200, 201):
+                    self.logger.info("Agent account auto-registered successfully. Retrying login...")
+                    retry_login = self._client.post(url, json=payload)
+                    if retry_login.status_code == 200:
+                        self._access_token = retry_login.json()["access_token"]
+                        self.logger.info("Successfully authenticated with backend after auto-registration.")
+                        return True
+                self.logger.error(
+                    f"Login failed: HTTP {resp.status_code} — {resp.text[:200]}"
+                )
+                return False
             else:
                 self.logger.error(
                     f"Login failed: HTTP {resp.status_code} — {resp.text[:200]}"

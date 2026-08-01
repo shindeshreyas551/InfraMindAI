@@ -2,7 +2,30 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { tokenStore } from "@/lib/api";
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8000/api/v1/ws";
+function getWsBase(): string {
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    let url = process.env.NEXT_PUBLIC_WS_URL.trim().replace(/\/+$/, "");
+    if (typeof window !== "undefined" && window.location.protocol === "https:" && url.startsWith("ws:")) {
+      url = url.replace(/^ws:/i, "wss:");
+    }
+    return url;
+  }
+  let apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  apiUrl = apiUrl.trim().replace(/\/+$/, "");
+  if (!apiUrl.endsWith("/api/v1")) {
+    apiUrl = `${apiUrl}/api/v1`;
+  }
+  let wsUrl = apiUrl.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:");
+  if (!wsUrl.endsWith("/ws")) {
+    wsUrl = `${wsUrl}/ws`;
+  }
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && wsUrl.startsWith("ws:")) {
+    wsUrl = wsUrl.replace(/^ws:/i, "wss:");
+  }
+  return wsUrl;
+}
+
+const WS_BASE = getWsBase();
 
 export interface LiveMetric {
   type: "metric" | "alert" | "ping";

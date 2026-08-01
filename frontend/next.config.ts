@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
 
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const cleanApiUrl = rawApiUrl.trim().replace(/\/+$/, "");
+const targetUrl = cleanApiUrl.endsWith("/api/v1") ? cleanApiUrl : `${cleanApiUrl}/api/v1`;
+
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/:path*`,
+        destination: `${targetUrl}/:path*`,
       },
     ];
   },

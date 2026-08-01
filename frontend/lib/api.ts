@@ -3,7 +3,16 @@
  * All fetch calls go through these functions — token management is handled here.
  */
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+function getApiBase(): string {
+  let url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  url = url.trim().replace(/\/+$/, "");
+  if (!url.endsWith("/api/v1")) {
+    url = `${url}/api/v1`;
+  }
+  return url;
+}
+
+const API = getApiBase();
 
 // ── Token storage (localStorage, client-side only) ────────────────────────────
 export const tokenStore = {
