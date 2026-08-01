@@ -19,10 +19,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(email, password, name);
-      router.push("/login?registered=1");
+      window.location.href = "/login?registered=1";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
       setLoading(false);
     }
   }

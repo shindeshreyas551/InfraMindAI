@@ -57,10 +57,22 @@ class Settings(BaseSettings):
         return v
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
+    def assemble_cors_origins(cls, v: Union[str, List[str], None]) -> List[str]:
+        if not v:
+            return ["*"]
+        if isinstance(v, str):
+            v_str = v.strip()
+            if not v_str or v_str == "*":
+                return ["*"]
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
         return v
+
 
 
 settings = Settings()

@@ -238,46 +238,53 @@ export default function DashboardPage() {
 
   const load = useCallback(async () => {
     try {
-      const [devs, me, userAlerts] = await Promise.all([
-        getDevices(),
-        getMe(),
+      const me = await getMe();
+      setUser(me);
+
+      const [devs, userAlerts] = await Promise.all([
+        getDevices().catch(() => []),
         getUserUnresolvedAlerts().catch(() => []),
       ]);
 
       setDevices(devs);
-      setUser(me);
       setAlerts(userAlerts);
 
-      // Fetch latest metric for every device
-      const newMap: MetricsMap = {};
-      await Promise.all(
-        devs.map(async (d) => {
-          try {
-            newMap[d.device_uuid] = await getLatestMetric(d.device_uuid);
-          } catch {}
-        })
-      );
-      setMetricsMap(newMap);
+      if (devs.length > 0) {
+        // Fetch latest metric for every device
+        const newMap: MetricsMap = {};
+        await Promise.all(
+          devs.map(async (d) => {
+            try {
+              newMap[d.device_uuid] = await getLatestMetric(d.device_uuid);
+            } catch {}
+          })
+        );
+        setMetricsMap(newMap);
 
-      // Determine primary device for chart
-      const primary = devs.find((d) => d.is_online) || devs[0];
-      if (primary) {
-        setPrimaryUuid((prev) => prev ?? primary.device_uuid);
+        // Determine primary device for chart
+        const primary = devs.find((d) => d.is_online) || devs[0];
+        if (primary) {
+          setPrimaryUuid((prev) => prev ?? primary.device_uuid);
 
-        if (initialHistory.length === 0) {
-          try {
-            const m = await getLatestMetric(primary.device_uuid);
-            const now = new Date().toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-            setInitialHistory([{ t: now, cpu: m.cpu_usage_percent ?? 0, ram: m.ram_usage_percent ?? 0 }]);
-          } catch {}
+          if (initialHistory.length === 0) {
+            try {
+              const m = await getLatestMetric(primary.device_uuid);
+              const now = new Date().toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+              setInitialHistory([{ t: now, cpu: m.cpu_usage_percent ?? 0, ram: m.ram_usage_percent ?? 0 }]);
+            } catch {}
+          }
         }
       }
-    } catch {
-      router.push("/login");
+    } catch (err: any) {
+      console.error("Dashboard load error:", err);
+      if (err?.message === "Session expired" || err?.message?.includes("401") || err?.message?.includes("Could not validate credentials")) {
+        tokenStore.clear();
+        window.location.href = "/login";
+      }
     } finally {
       setLoading(false);
     }
-  }, [initialHistory.length, router]);
+  }, [initialHistory.length]);
 
   // Handle incoming live alert push (WebSocket / Test Alert)
   const handleLiveAlertReceived = useCallback((alertData: any) => {
@@ -314,13 +321,13 @@ export default function DashboardPage() {
   }, [soundEnabled]);
 
   useEffect(() => {
-    if (!tokenStore.getAccess()) { router.push("/login"); return; }
+    if (!tokenStore.getAccess()) { window.location.href = "/login"; return; }
     load();
     intervalRef.current = setInterval(load, 10000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [load, router]);
+  }, [load]);
 
   const handleResolveAlert = async (alertId: number) => {
     try {
