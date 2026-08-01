@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --background: #030712;
+  --surface: #0f172a;
+  --surface-2: #1e293b;
+  --border: #1e293b;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.3);
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text-primary: #f1f5f9;
+  --text-muted: #64748b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Glassmorphism card */
+.glass {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 1rem;
+}
+
+/* Glow effect */
+.glow {
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* Status dot pulse */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.status-dot { animation: pulse-dot 2s infinite; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
