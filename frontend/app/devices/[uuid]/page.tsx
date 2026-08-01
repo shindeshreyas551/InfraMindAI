@@ -299,7 +299,7 @@ export default function DeviceDetailPage() {
               <Tooltip
                 contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: "8px" }}
                 labelStyle={{ color: "#94a3b8" }}
-                formatter={(val: number) => [`${val.toFixed(2)} KB/s`]}
+                formatter={(val: any) => [`${Number(val ?? 0).toFixed(2)} KB/s`]}
               />
               <Legend wrapperStyle={{ fontSize: "12px", color: "#94a3b8" }} />
               <Area type="monotone" dataKey="up" name="Upload" stroke="#06b6d4" fill="url(#upG)" strokeWidth={2} dot={false} />

@@ -225,7 +225,7 @@ export default function DashboardPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Request browser desktop notification permissions on load
   useEffect(() => {
@@ -317,7 +317,9 @@ export default function DashboardPage() {
     if (!tokenStore.getAccess()) { router.push("/login"); return; }
     load();
     intervalRef.current = setInterval(load, 10000);
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [load, router]);
 
   const handleResolveAlert = async (alertId: number) => {

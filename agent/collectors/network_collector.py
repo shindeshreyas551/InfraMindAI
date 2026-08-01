@@ -111,7 +111,8 @@ class NetworkCollector(BaseCollector):
             net_stats = psutil.net_if_stats()
 
             for iface_name, addrs in net_addrs.items():
-                is_up = net_stats.get(iface_name).isup if iface_name in net_stats else False
+                stat = net_stats.get(iface_name)
+                is_up = stat.isup if stat is not None else False
                 if not is_up:
                     continue
 
