@@ -22,7 +22,7 @@ class AgentSettings(BaseSettings):
 
     agent_name: str = "InfraMind-Windows-Agent"
     agent_version: str = "0.2.0"
-    backend_url: str = "http://localhost:8000/api/v1/telemetry"
+    backend_url: str = "https://inframindai.onrender.com/api/v1/telemetry"
     collection_interval_sec: float = 10.0
     log_level: str = "INFO"
     log_file_path: str = "logs/agent.log"
@@ -41,13 +41,7 @@ class AgentSettings(BaseSettings):
     cpu_sample_interval_sec: float = 1.0
 
     # ── Backend API Connection ────────────────────────────────────────────────
-    # When running as compiled exe (PyInstaller frozen), use production URL.
-    # During development, defaults to localhost.
-    backend_api_url: str = (
-        "https://inframindai.onrender.com/api/v1"
-        if getattr(__import__("sys"), "frozen", False)
-        else "http://localhost:8000/api/v1"
-    )
+    backend_api_url: str = "https://inframindai.onrender.com/api/v1"
     backend_email: str = "admin@inframind.ai"
     backend_password: str = "SecurePass123"
     upload_interval_sec: float = 5.0     # How often the agent POSTs telemetry

@@ -92,11 +92,7 @@ def main() -> None:
             logger.warning("First-time authentication skipped. Agent running in anonymous mode.")
 
     # ── Initialize System Tray Application ────────────────────────────────────
-    dashboard_url = (
-        "https://inframindai.vercel.app/dashboard"
-        if getattr(sys, "frozen", False)
-        else "http://localhost:3000/dashboard"
-    )
+    dashboard_url = "https://inframindai.vercel.app/dashboard"
     tray = AgentSystemTray(
         dashboard_url=dashboard_url,
         on_exit=lambda: sys.exit(0),

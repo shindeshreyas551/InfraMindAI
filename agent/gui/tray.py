@@ -36,7 +36,7 @@ class AgentSystemTray:
 
     def __init__(
         self,
-        dashboard_url: str = "http://localhost:3000/dashboard",
+        dashboard_url: str = "https://inframindai.vercel.app/dashboard",
         on_pause: Optional[Callable[[], None]] = None,
         on_resume: Optional[Callable[[], None]] = None,
         on_restart: Optional[Callable[[], None]] = None,

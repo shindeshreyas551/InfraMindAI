@@ -10,7 +10,7 @@ function getWsBase(): string {
     }
     return url;
   }
-  let apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  let apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://inframindai.onrender.com/api/v1";
   apiUrl = apiUrl.trim().replace(/\/+$/, "");
   if (!apiUrl.endsWith("/api/v1")) {
     apiUrl = `${apiUrl}/api/v1`;

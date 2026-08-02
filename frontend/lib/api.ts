@@ -4,7 +4,7 @@
  */
 
 function getApiBase(): string {
-  let url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  let url = process.env.NEXT_PUBLIC_API_URL || "https://inframindai.onrender.com/api/v1";
   url = url.trim().replace(/\/+$/, "");
   if (!url.endsWith("/api/v1")) {
     url = `${url}/api/v1`;

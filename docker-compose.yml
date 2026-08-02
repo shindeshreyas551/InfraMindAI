@@ -38,7 +38,7 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
       REFRESH_TOKEN_EXPIRE_MINUTES: "10080"
       DATABASE_URL: "postgresql://${POSTGRES_USER:-inframind}:${POSTGRES_PASSWORD:-inframind_secret}@db:5432/${POSTGRES_DB:-inframind}"
-      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000"]'
+      BACKEND_CORS_ORIGINS: '["https://infra-mind-ai-three.vercel.app","http://localhost:3000","http://frontend:3000"]'
       RATE_LIMIT_PER_MINUTE: "10"
     ports:
       - "8000:8000"
@@ -61,8 +61,8 @@ services:
       backend:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:8000/api/v1"
-      NEXT_PUBLIC_WS_URL: "ws://localhost:8000/api/v1/ws"
+      NEXT_PUBLIC_API_URL: "https://inframindai.onrender.com/api/v1"
+      NEXT_PUBLIC_WS_URL: "wss://inframindai.onrender.com/api/v1/ws"
     ports:
       - "3000:3000"
 
