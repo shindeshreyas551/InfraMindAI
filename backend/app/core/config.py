@@ -48,12 +48,6 @@ class Settings(BaseSettings):
         # Automatically convert legacy postgres:// protocol to postgresql:// for SQLAlchemy compatibility
         if v.startswith("postgres://"):
             v = "postgresql://" + v[11:]
-        # Fail immediately if an attempt is made to use SQLite
-        if v.startswith("sqlite"):
-            raise ValueError(
-                "SQLite is not supported in production. "
-                "Please configure a valid PostgreSQL connection string in DATABASE_URL."
-            )
         return v
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")

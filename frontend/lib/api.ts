@@ -97,7 +97,65 @@ export async function register(email: string, password: string, full_name: strin
 }
 
 export async function getMe() {
-  return apiFetch<{ id: number; email: string; full_name: string; is_active: boolean }>("/auth/me");
+  return apiFetch<{ id: number; email: string; full_name: string; is_active: boolean; is_superuser: boolean }>("/auth/me");
+}
+
+// ── Admin Portal ──────────────────────────────────────────────────────────────
+export interface AdminOverview {
+  total_users: number;
+  active_users: number;
+  total_devices: number;
+  online_devices: number;
+  offline_devices: number;
+  avg_cpu_percent: number;
+  avg_ram_percent: number;
+  total_alerts: number;
+  unresolved_alerts: number;
+}
+
+export interface UserAdminView {
+  id: number;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_superuser: boolean;
+  created_at: string;
+  device_count: number;
+}
+
+export async function getAdminOverview() {
+  return apiFetch<AdminOverview>("/admin/overview");
+}
+
+export async function getAdminUsers(q?: string) {
+  const query = q ? `?q=${encodeURIComponent(q)}` : "";
+  return apiFetch<UserAdminView[]>(`/admin/users${query}`);
+}
+
+export async function toggleDisableUser(userId: number) {
+  return apiFetch<UserAdminView>(`/admin/users/${userId}/toggle-disable`, { method: "POST" });
+}
+
+export async function deleteUser(userId: number) {
+  return apiFetch(`/admin/users/${userId}`, { method: "DELETE" });
+}
+
+export async function resetUserPassword(userId: number, newPassword: string) {
+  return apiFetch<{ message: string }>(`/admin/users/${userId}/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+}
+
+export async function assignDevice(uuid: string, userId: number) {
+  return apiFetch<Device>(`/admin/devices/${uuid}/assign`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function exportAdminReport() {
+  return apiFetch<any>("/admin/reports/export");
 }
 
 // ── Devices ───────────────────────────────────────────────────────────────────
@@ -107,6 +165,25 @@ export async function getDevices() {
 
 export async function getDevice(uuid: string) {
   return apiFetch<Device>(`/devices/${uuid}`);
+}
+
+export async function renameDevice(uuid: string, display_name: string) {
+  return apiFetch<Device>(`/devices/${uuid}`, {
+    method: "PATCH",
+    body: JSON.stringify({ display_name }),
+  });
+}
+
+export async function deleteDevice(uuid: string) {
+  return apiFetch(`/devices/${uuid}`, { method: "DELETE" });
+}
+
+export async function toggleDisableDevice(uuid: string) {
+  return apiFetch<Device>(`/devices/${uuid}/toggle-disable`, { method: "POST" });
+}
+
+export function getDownloadAgentUrl(): string {
+  return `${API}/download/agent`;
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
@@ -152,11 +229,15 @@ export interface Device {
   id: number;
   device_uuid: string;
   hostname: string;
+  display_name?: string | null;
   os_name: string;
   os_version: string;
   architecture: string;
   agent_version: string;
+  mac_address?: string | null;
+  ip_address?: string | null;
   is_online: boolean;
+  is_disabled?: boolean;
   last_seen_at: string | null;
   created_at: string;
 }

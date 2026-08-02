@@ -8,12 +8,14 @@ import {
 import {
   Shield, Monitor, Cpu, Activity,
   AlertTriangle, CheckCircle2, LogOut, RefreshCw, Bell, X, Zap,
-  Volume2, VolumeX, ShieldAlert, AlertCircle, Sparkles, Check
+  Volume2, VolumeX, ShieldAlert, AlertCircle, Sparkles, Check,
+  Download, Edit2, Trash2, Power, Search
 } from "lucide-react";
 import {
   getDevices, getLatestMetric, getMe,
   tokenStore, Device, Metric, Alert,
-  getUserUnresolvedAlerts, resolveAlert, resolveAllUserAlerts, triggerTestAlert
+  getUserUnresolvedAlerts, resolveAlert, resolveAllUserAlerts, triggerTestAlert,
+  renameDevice, deleteDevice, toggleDisableDevice, getDownloadAgentUrl
 } from "@/lib/api";
 import { useLiveMetrics } from "@/hooks/useLiveMetrics";
 
@@ -213,7 +215,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [devices, setDevices] = useState<Device[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [user, setUser] = useState<{ email: string; full_name?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; full_name?: string; is_superuser?: boolean } | null>(null);
   const [metricsMap, setMetricsMap] = useState<MetricsMap>({});
   const [initialHistory, setInitialHistory] = useState<{ t: string; cpu: number; ram: number }[]>([]);
   const [primaryUuid, setPrimaryUuid] = useState<string | null>(null);
@@ -479,6 +481,15 @@ export default function DashboardPage() {
           <div className="h-4 w-px bg-slate-800 hidden md:block" />
           <span className="text-slate-400 text-xs hidden md:block">{user?.email}</span>
 
+          {user?.is_superuser && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors text-xs bg-indigo-500/10 border border-indigo-500/30 px-3 py-1.5 rounded-lg font-semibold"
+            >
+              <Shield className="w-3.5 h-3.5" /> Admin Portal
+            </Link>
+          )}
+
           <button
             onClick={() => { tokenStore.clear(); router.push("/login"); }}
             className="flex items-center gap-1.5 text-slate-400 hover:text-red-400 transition-colors text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
@@ -618,18 +629,25 @@ export default function DashboardPage() {
               Real-time endpoint telemetry, threshold alert rules, and AI incident analysis.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={getDownloadAgentUrl()}
+              download="InfraMindAgentSetup.exe"
+              className="px-4 py-2.5 text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" /> Download Windows Agent
+            </a>
             <button
               onClick={() => handleTriggerTest("suspicious_process")}
-              className="px-3.5 py-2 text-xs font-semibold bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 rounded-xl transition-all flex items-center gap-1.5"
+              className="px-3.5 py-2.5 text-xs font-semibold bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 rounded-xl transition-all flex items-center gap-1.5"
             >
-              <AlertTriangle className="w-3.5 h-3.5" /> Test Suspicious Process Alert
+              <AlertTriangle className="w-3.5 h-3.5" /> Test Alert
             </button>
             <button
               onClick={() => setAlertDrawerOpen(true)}
-              className="px-3.5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5"
+              className="px-3.5 py-2.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5"
             >
-              <Bell className="w-3.5 h-3.5" /> Open Alert Center ({alerts.length})
+              <Bell className="w-3.5 h-3.5" /> Alert Center ({alerts.length})
             </button>
           </div>
         </div>

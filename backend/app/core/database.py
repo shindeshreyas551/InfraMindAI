@@ -19,14 +19,18 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from app.core.config import settings
 
 
-# ── Engine creation (PostgreSQL) ─────────────────────────────────────────────
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_pre_ping=True,   # Verify connections before use (avoids stale conn errors)
-    pool_size=10,         # Maintain up to 10 persistent connections
-    max_overflow=20,      # Allow up to 20 temporary connections beyond pool_size
-    echo=False,           # Set to True for SQL query debugging
-)
+# ── Engine creation (PostgreSQL / SQLite fallback for local dev) ──────────────
+is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+engine_kwargs = {"echo": False}
+
+if is_sqlite:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+
+engine = create_engine(settings.DATABASE_URL, **engine_kwargs)
 
 
 

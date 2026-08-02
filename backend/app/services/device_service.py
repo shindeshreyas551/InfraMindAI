@@ -41,6 +41,12 @@ def register_or_update_device(
             "architecture": payload.architecture,
             "agent_version": payload.agent_version,
         }
+        if payload.display_name:
+            updates["display_name"] = payload.display_name
+        if payload.mac_address:
+            updates["mac_address"] = payload.mac_address
+        if payload.ip_address:
+            updates["ip_address"] = payload.ip_address
         if owner_id and existing.owner_id is None:
             updates["owner_id"] = owner_id
         device = device_repository.update(db, db_obj=existing, updates=updates)
@@ -48,10 +54,13 @@ def register_or_update_device(
         device = Device(
             device_uuid=payload.device_uuid,
             hostname=payload.hostname,
+            display_name=payload.display_name,
             os_name=payload.os_name,
             os_version=payload.os_version,
             architecture=payload.architecture,
             agent_version=payload.agent_version,
+            mac_address=payload.mac_address,
+            ip_address=payload.ip_address,
             owner_id=owner_id,
         )
         device = device_repository.create(db, obj=device)
@@ -87,3 +96,22 @@ def get_device_by_uuid(db: Session, device_uuid: str) -> Device:
             detail=f"Device '{device_uuid}' not found.",
         )
     return device
+
+
+def update_device(db: Session, device_uuid: str, updates: dict) -> Device:
+    """Rename or update metadata for a device."""
+    device = get_device_by_uuid(db, device_uuid)
+    return device_repository.update(db, db_obj=device, updates=updates)
+
+
+def delete_device(db: Session, device_uuid: str) -> None:
+    """Remove a device and cascade delete its metrics and alerts."""
+    device = get_device_by_uuid(db, device_uuid)
+    device_repository.delete(db, id=device.id)
+
+
+def toggle_disable_device(db: Session, device_uuid: str) -> Device:
+    """Toggle monitoring state (disabled / enabled) for a device."""
+    device = get_device_by_uuid(db, device_uuid)
+    new_state = not device.is_disabled
+    return device_repository.update(db, db_obj=device, updates={"is_disabled": new_state})

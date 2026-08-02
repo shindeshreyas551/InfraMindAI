@@ -42,13 +42,17 @@ class Device(Base):
 
     # Human-readable info populated on first registration / heartbeat
     hostname: Mapped[str] = mapped_column(String(255), nullable=False, default="unknown")
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     os_name: Mapped[str] = mapped_column(String(100), nullable=False, default="Windows")
     os_version: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     architecture: Mapped[str] = mapped_column(String(50), nullable=False, default="")
     agent_version: Mapped[str] = mapped_column(String(30), nullable=False, default="0.0.0")
+    mac_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Status tracking
     is_online: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_disabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     registered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

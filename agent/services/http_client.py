@@ -25,6 +25,7 @@ import httpx
 
 from agent.config.settings import get_settings, AgentSettings
 from agent.utils.logger import get_logger
+from agent.utils.credentials import load_credentials, save_credentials, clear_credentials
 
 
 class BackendHTTPClient:
@@ -38,19 +39,55 @@ class BackendHTTPClient:
         self.logger = get_logger("services.http_client", settings=settings)
         self.base_url = settings.backend_api_url.rstrip("/")
         self._access_token: Optional[str] = None
+        self._refresh_token: Optional[str] = None
+        
+        # Attempt to load saved encrypted credentials on startup
+        creds = load_credentials()
+        if creds and creds.get("access_token"):
+            self._access_token = creds.get("access_token")
+            self._refresh_token = creds.get("refresh_token")
+            self.logger.info(f"Loaded saved credentials for account: {creds.get('email')}")
+
         self._client = httpx.Client(
             timeout=settings.upload_timeout_sec,
             headers={"Content-Type": "application/json", "Accept": "application/json"},
         )
 
     # ── Authentication ────────────────────────────────────────────────────────
+    def refresh_token(self) -> bool:
+        """Attempts to exchange saved refresh_token for new access token."""
+        if not self._refresh_token:
+            return False
+        url = f"{self.base_url}/auth/refresh"
+        try:
+            resp = self._client.post(url, json={"refresh_token": self._refresh_token})
+            if resp.status_code == 200:
+                data = resp.json()
+                self._access_token = data["access_token"]
+                self._refresh_token = data.get("refresh_token", self._refresh_token)
+                creds = load_credentials() or {}
+                save_credentials(
+                    creds.get("email", self.settings.backend_email),
+                    self._access_token,
+                    self._refresh_token,
+                )
+                self.logger.info("Successfully refreshed JWT access token.")
+                return True
+        except Exception as e:
+            self.logger.warning(f"Token refresh attempt failed: {e}")
+        return False
+
     def login(self) -> bool:
         """
-        Authenticates with the backend using configured email/password.
+        Authenticates with the backend using stored or configured email/password.
         Stores the JWT access token for subsequent requests.
 
         Returns True on success, False on failure.
         """
+        # Try refresh first if we have a refresh token
+        if self._refresh_token and self.refresh_token():
+            return True
+
         url = f"{self.base_url}/auth/login"
         payload = {
             "email": self.settings.backend_email,
@@ -61,6 +98,8 @@ class BackendHTTPClient:
             if resp.status_code == 200:
                 data = resp.json()
                 self._access_token = data["access_token"]
+                self._refresh_token = data.get("refresh_token")
+                save_credentials(self.settings.backend_email, self._access_token, self._refresh_token or "")
                 self.logger.info("Successfully authenticated with backend.")
                 return True
             elif resp.status_code == 401:

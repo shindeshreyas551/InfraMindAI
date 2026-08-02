@@ -22,6 +22,27 @@ from agent.config.settings import get_settings
 from agent.services.metrics_aggregator import MetricsAggregator
 from agent.services.uploader import MetricsUploader
 from agent.utils.logger import get_logger
+from agent.utils.credentials import load_credentials, save_credentials
+from agent.gui.auth_dialog import prompt_gui_or_cli_auth
+from agent.gui.tray import AgentSystemTray
+
+
+def _setup_windows_autostart() -> None:
+    """Register agent binary in Windows CurrentVersion/Run registry key."""
+    if sys.platform == "win32":
+        try:
+            import winreg  # type: ignore
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                0,
+                winreg.KEY_SET_VALUE,
+            )
+            executable = sys.executable if getattr(sys, 'frozen', False) else f'"{sys.executable}" "{Path(__file__).resolve()}"'
+            winreg.SetValueEx(key, "InfraMindAgent", 0, winreg.REG_SZ, executable)
+            winreg.CloseKey(key)
+        except Exception:
+            pass
 
 
 def main() -> None:
@@ -55,12 +76,40 @@ def main() -> None:
         _run_once(settings, logger, args.output)
         return
 
+    # ── Windows Autostart Registry Registration ──────────────────────────────
+    _setup_windows_autostart()
+
+    # ── Ensure Authenticated Credentials ─────────────────────────────────────
+    creds = load_credentials()
+    if not creds or not creds.get("access_token"):
+        logger.info("No saved user token found. Launching first-time onboarding GUI setup...")
+        res = prompt_gui_or_cli_auth(settings.backend_api_url)
+        if res:
+            email, access_tok, refresh_tok = res
+            save_credentials(email, access_tok, refresh_tok)
+            logger.info(f"Agent successfully registered to account: {email}")
+        else:
+            logger.warning("First-time authentication skipped. Agent running in anonymous mode.")
+
+    # ── Initialize System Tray Application ────────────────────────────────────
+    dashboard_url = (
+        "https://inframindai.vercel.app/dashboard"
+        if getattr(sys, "frozen", False)
+        else "http://localhost:3000/dashboard"
+    )
+    tray = AgentSystemTray(
+        dashboard_url=dashboard_url,
+        on_exit=lambda: sys.exit(0),
+    )
+    tray.start()
+
     # ── Continuous upload loop (production mode) ──────────────────────────────
     uploader = MetricsUploader(settings=settings)
 
     # Graceful shutdown on Ctrl+C / SIGTERM
     def _handle_shutdown(sig, frame):
         logger.info(f"Received signal {sig} — shutting down...")
+        tray.stop()
         uploader.stop()
 
     signal.signal(signal.SIGINT, _handle_shutdown)

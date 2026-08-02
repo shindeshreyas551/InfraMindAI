@@ -117,3 +117,15 @@ def get_current_user(
     if not user or not user.is_active:
         raise credentials_error
     return user
+
+
+def get_current_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """FastAPI dependency: restricts access to superusers (ADMIN role) only."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Admin privileges required.",
+        )
+    return current_user
