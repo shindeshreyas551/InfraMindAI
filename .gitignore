@@ -36,7 +36,6 @@ agent/.venv/
 
 build/
 dist/
-!agent/dist/InfraMindAgentSetup.exe
 *.egg-info/
 .eggs/
 

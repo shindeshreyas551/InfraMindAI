@@ -8,12 +8,11 @@ from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/download", tags=["Download & Updates"])
 
-# Root directory of project
-BASE_DIR = Path(__file__).resolve().parents[5]  # d:\InfraMind AI
-DIST_DIR = BASE_DIR / "agent" / "dist"
-INSTALLER_PATH = DIST_DIR / "InfraMindAgentSetup.exe"
-DIR_EXE_PATH = DIST_DIR / "InfraMindAgent" / "InfraMindAgent.exe"
-EXE_PATH = DIST_DIR / "InfraMindAgent.exe"
+# Root directory of backend
+BASE_DIR = Path(__file__).resolve().parents[4]  # backend directory
+INSTALLER_PATH = BASE_DIR / "downloads" / "InfraMindAgentSetup.exe"
+DIR_EXE_PATH = BASE_DIR / "downloads" / "InfraMindAgent.exe"
+EXE_PATH = BASE_DIR / "downloads" / "InfraMindAgent.exe"
 
 
 @router.get(
