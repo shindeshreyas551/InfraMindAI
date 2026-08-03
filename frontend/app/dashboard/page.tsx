@@ -215,7 +215,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [devices, setDevices] = useState<Device[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [user, setUser] = useState<{ email: string; full_name?: string; is_superuser?: boolean } | null>(null);
+  const [user, setUser] = useState<{ email: string; full_name?: string; role?: string } | null>(null);
   const [metricsMap, setMetricsMap] = useState<MetricsMap>({});
   const [initialHistory, setInitialHistory] = useState<{ t: string; cpu: number; ram: number }[]>([]);
   const [primaryUuid, setPrimaryUuid] = useState<string | null>(null);
@@ -481,7 +481,7 @@ export default function DashboardPage() {
           <div className="h-4 w-px bg-slate-800 hidden md:block" />
           <span className="text-slate-400 text-xs hidden md:block">{user?.email}</span>
 
-          {user?.is_superuser && (
+          {user?.role === "ADMIN" && (
             <Link
               href="/admin"
               className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors text-xs bg-indigo-500/10 border border-indigo-500/30 px-3 py-1.5 rounded-lg font-semibold"

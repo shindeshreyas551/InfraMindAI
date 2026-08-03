@@ -15,7 +15,7 @@ import {
 } from "@/lib/api";
 
 export default function AdminPortalPage() {
-  const [me, setMe] = useState<{ id: number; email: string; full_name: string; is_superuser: boolean } | null>(null);
+  const [me, setMe] = useState<{ id: number; email: string; full_name: string; role: string } | null>(null);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [users, setUsers] = useState<UserAdminView[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -37,7 +37,7 @@ export default function AdminPortalPage() {
       try {
         setLoading(true);
         const user = await getMe();
-        if (!user.is_superuser) {
+        if (user.role !== "ADMIN") {
           window.location.href = "/dashboard";
           return;
         }
@@ -297,8 +297,8 @@ export default function AdminPortalPage() {
                         <div className="text-xs text-slate-400">{u.email}</div>
                       </td>
                       <td className="p-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${u.is_superuser ? "bg-indigo-500/20 text-indigo-300" : "bg-slate-800 text-slate-300"}`}>
-                          {u.is_superuser ? "ADMIN" : "USER"}
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${u.role === "ADMIN" ? "bg-indigo-500/20 text-indigo-300" : "bg-slate-800 text-slate-300"}`}>
+                          {u.role}
                         </span>
                       </td>
                       <td className="p-4">

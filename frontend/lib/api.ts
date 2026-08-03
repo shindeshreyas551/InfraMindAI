@@ -97,7 +97,7 @@ export async function register(email: string, password: string, full_name: strin
 }
 
 export async function getMe() {
-  return apiFetch<{ id: number; email: string; full_name: string; is_active: boolean; is_superuser: boolean }>("/auth/me");
+  return apiFetch<{ id: number; email: string; full_name: string; role: string; is_active: boolean; is_verified: boolean; is_disabled: boolean }>("/auth/me");
 }
 
 // ── Admin Portal ──────────────────────────────────────────────────────────────
@@ -117,8 +117,10 @@ export interface UserAdminView {
   id: number;
   email: string;
   full_name: string;
+  role: string;
   is_active: boolean;
-  is_superuser: boolean;
+  is_verified: boolean;
+  is_disabled: boolean;
   created_at: string;
   device_count: number;
 }

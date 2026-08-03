@@ -41,8 +41,12 @@ def register_user(db: Session, payload: UserCreate) -> User:
         )
     new_user = User(
         email=payload.email,
-        hashed_password=hash_password(payload.password),
+        password_hash=hash_password(payload.password),
         full_name=payload.full_name,
+        role="USER",
+        is_active=True,
+        is_verified=False,
+        is_disabled=False,
     )
     return user_repository.create(db, obj=new_user)
 
@@ -51,13 +55,13 @@ def register_user(db: Session, payload: UserCreate) -> User:
 def login_user(db: Session, email: str, password: str) -> Token:
     """Validate credentials and return access + refresh token pair."""
     user = user_repository.get_by_email(db, email)
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if not user.is_active:
+    if not user.is_active or user.is_disabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This account has been disabled.",
@@ -85,7 +89,7 @@ def refresh_access_token(db: Session, refresh_token: str) -> Token:
         raise credentials_error
 
     user = user_repository.get(db, user_id)
-    if not user or not user.is_active:
+    if not user or not user.is_active or user.is_disabled:
         raise credentials_error
 
     return Token(
@@ -114,7 +118,7 @@ def get_current_user(
         raise credentials_error
 
     user = user_repository.get(db, user_id)
-    if not user or not user.is_active:
+    if not user or not user.is_active or user.is_disabled:
         raise credentials_error
     return user
 
@@ -123,7 +127,7 @@ def get_current_admin_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """FastAPI dependency: restricts access to superusers (ADMIN role) only."""
-    if not current_user.is_superuser:
+    if current_user.role != "ADMIN":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: Admin privileges required.",
