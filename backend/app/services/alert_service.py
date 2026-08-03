@@ -137,11 +137,18 @@ def create_alert(db: Session, payload: AlertCreate) -> Alert:
     return alert_repository.create(db, obj=alert)
 
 
-def resolve_alert(db: Session, alert_id: int) -> Alert:
+def resolve_alert(db: Session, alert_id: int, owner_id: Optional[int] = None) -> Alert:
     """Resolve an alert by ID."""
     alert = alert_repository.get(db, alert_id)
     if not alert:
         raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found.")
+    
+    # Enforce ownership if requested
+    if owner_id is not None:
+        device = device_repository.get(db, alert.device_id)
+        if not device or device.owner_id != owner_id:
+            raise HTTPException(status_code=403, detail="Access denied: You do not own this alert's device.")
+
     if alert.is_resolved:
         raise HTTPException(status_code=400, detail="Alert is already resolved.")
     return alert_repository.resolve(db, alert)
@@ -152,11 +159,14 @@ def get_device_alerts(
     device_uuid: str,
     only_unresolved: bool = False,
     limit: int = 100,
+    owner_id: Optional[int] = None,
 ) -> AlertListResponse:
     """List alerts for a device."""
     device = device_repository.get_by_uuid(db, device_uuid)
     if not device:
         raise HTTPException(status_code=404, detail=f"Device '{device_uuid}' not found.")
+    if owner_id is not None and device.owner_id != owner_id:
+        raise HTTPException(status_code=403, detail="Access denied: You do not own this device.")
     alerts = alert_repository.get_for_device(db, device.id, only_unresolved=only_unresolved, limit=limit)
     total = alert_repository.count_for_device(db, device.id)
     return AlertListResponse(device_id=device.id, total=total, alerts=alerts)

@@ -82,7 +82,7 @@ def list_alerts(
     current_user: User = Depends(get_current_user),
 ):
     """Returns all alerts for the given device (resolved and unresolved), newest first."""
-    return get_device_alerts(db, device_uuid, only_unresolved=False, limit=limit)
+    return get_device_alerts(db, device_uuid, only_unresolved=False, limit=limit, owner_id=current_user.id)
 
 
 @router.get(
@@ -96,7 +96,7 @@ def list_unresolved(
     current_user: User = Depends(get_current_user),
 ):
     """Returns only active (unresolved) alerts for the given device."""
-    return get_device_alerts(db, device_uuid, only_unresolved=True, limit=200)
+    return get_device_alerts(db, device_uuid, only_unresolved=True, limit=200, owner_id=current_user.id)
 
 
 @router.post(
@@ -125,5 +125,5 @@ def resolve(
     current_user: User = Depends(get_current_user),
 ):
     """Mark an alert as resolved. Sets resolved_at timestamp automatically."""
-    return resolve_alert(db, alert_id)
+    return resolve_alert(db, alert_id, owner_id=current_user.id)
 

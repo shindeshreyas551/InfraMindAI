@@ -18,6 +18,9 @@ from app.schemas.user import UserOut
 from app.schemas.device import DeviceOut
 from app.services.auth_service import get_current_admin_user
 from app.core.security import hash_password
+from app.schemas.metric import MetricOut, MetricHistoryResponse
+from app.services.device_service import get_all_devices
+from app.services.metric_service import get_latest_metric, get_metric_history
 
 router = APIRouter(prefix="/admin", tags=["Admin Portal"])
 
@@ -271,3 +274,44 @@ def export_report(
         },
         "devices": device_summary,
     }
+
+@router.get(
+    "/devices",
+    response_model=List[DeviceOut],
+    summary="List all devices (Admin only)",
+)
+def admin_list_devices(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Returns ALL devices in the platform."""
+    return get_all_devices(db, owner_id=None)
+
+
+@router.get(
+    "/telemetry/{device_uuid}/latest",
+    response_model=MetricOut,
+    summary="Get latest metric for any device (Admin only)",
+)
+def admin_latest_metric(
+    device_uuid: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Returns the most recent metric for ANY device without ownership checks."""
+    return get_latest_metric(db, device_uuid, owner_id=None)
+
+
+@router.get(
+    "/telemetry/{device_uuid}/history",
+    response_model=MetricHistoryResponse,
+    summary="Get metric history for any device (Admin only)",
+)
+def admin_metric_history(
+    device_uuid: str,
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """Returns the metric history for ANY device without ownership checks."""
+    return get_metric_history(db, device_uuid, limit=limit, owner_id=None)

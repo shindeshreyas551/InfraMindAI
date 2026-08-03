@@ -57,7 +57,7 @@ def latest(
     current_user: User = Depends(get_current_user),
 ):
     """Returns the single most recent telemetry snapshot for the given device."""
-    return get_latest_metric(db, device_uuid)
+    return get_latest_metric(db, device_uuid, owner_id=current_user.id)
 
 
 @router.get(
@@ -72,4 +72,4 @@ def history(
     current_user: User = Depends(get_current_user),
 ):
     """Returns the last N telemetry snapshots for a device (newest first)."""
-    return get_metric_history(db, device_uuid, limit=limit)
+    return get_metric_history(db, device_uuid, limit=limit, owner_id=current_user.id)

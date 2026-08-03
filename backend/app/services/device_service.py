@@ -87,31 +87,36 @@ def get_all_devices(db: Session, owner_id: Optional[int] = None) -> List[Device]
     return device_repository.get_multi(db, limit=200)
 
 
-def get_device_by_uuid(db: Session, device_uuid: str) -> Device:
-    """Fetch a single device by UUID or raise 404."""
+def get_device_by_uuid(db: Session, device_uuid: str, owner_id: Optional[int] = None) -> Device:
+    """Fetch a single device by UUID or raise 404. Enforce owner_id if provided."""
     device = device_repository.get_by_uuid(db, device_uuid)
     if not device:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Device '{device_uuid}' not found.",
         )
+    if owner_id is not None and device.owner_id != owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: You do not own this device.",
+        )
     return device
 
 
-def update_device(db: Session, device_uuid: str, updates: dict) -> Device:
+def update_device(db: Session, device_uuid: str, updates: dict, owner_id: Optional[int] = None) -> Device:
     """Rename or update metadata for a device."""
-    device = get_device_by_uuid(db, device_uuid)
+    device = get_device_by_uuid(db, device_uuid, owner_id=owner_id)
     return device_repository.update(db, db_obj=device, updates=updates)
 
 
-def delete_device(db: Session, device_uuid: str) -> None:
+def delete_device(db: Session, device_uuid: str, owner_id: Optional[int] = None) -> None:
     """Remove a device and cascade delete its metrics and alerts."""
-    device = get_device_by_uuid(db, device_uuid)
+    device = get_device_by_uuid(db, device_uuid, owner_id=owner_id)
     device_repository.delete(db, id=device.id)
 
 
-def toggle_disable_device(db: Session, device_uuid: str) -> Device:
+def toggle_disable_device(db: Session, device_uuid: str, owner_id: Optional[int] = None) -> Device:
     """Toggle monitoring state (disabled / enabled) for a device."""
-    device = get_device_by_uuid(db, device_uuid)
+    device = get_device_by_uuid(db, device_uuid, owner_id=owner_id)
     new_state = not device.is_disabled
     return device_repository.update(db, db_obj=device, updates={"is_disabled": new_state})

@@ -71,9 +71,8 @@ def list_devices(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Returns all devices registered under the authenticated user account (or all for superuser)."""
-    owner_id = None if current_user.is_superuser else current_user.id
-    return get_all_devices(db, owner_id=owner_id)
+    """Returns all devices registered under the authenticated user account."""
+    return get_all_devices(db, owner_id=current_user.id)
 
 
 @router.get(
@@ -87,7 +86,7 @@ def get_device(
     current_user: User = Depends(get_current_user),
 ):
     """Fetch full details for a single device by its agent UUID."""
-    return get_device_by_uuid(db, device_uuid)
+    return get_device_by_uuid(db, device_uuid, owner_id=current_user.id)
 
 
 @router.patch(
@@ -103,7 +102,7 @@ def rename(
 ):
     """Rename a device's display_name or hostname."""
     updates = payload.model_dump(exclude_unset=True)
-    return update_device(db, device_uuid, updates)
+    return update_device(db, device_uuid, updates, owner_id=current_user.id)
 
 
 @router.delete(
@@ -117,7 +116,7 @@ def remove(
     current_user: User = Depends(get_current_user),
 ):
     """Delete a device and cascade remove its historical metrics and alerts."""
-    delete_device(db, device_uuid)
+    delete_device(db, device_uuid, owner_id=current_user.id)
     return None
 
 
@@ -132,4 +131,4 @@ def toggle_disable(
     current_user: User = Depends(get_current_user),
 ):
     """Toggles endpoint monitoring state between enabled and disabled."""
-    return toggle_disable_device(db, device_uuid)
+    return toggle_disable_device(db, device_uuid, owner_id=current_user.id)

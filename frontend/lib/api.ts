@@ -160,6 +160,18 @@ export async function exportAdminReport() {
   return apiFetch<any>("/admin/reports/export");
 }
 
+export async function getAdminDevices() {
+  return apiFetch<Device[]>("/admin/devices");
+}
+
+export async function getAdminLatestMetric(uuid: string) {
+  return apiFetch<Metric>(`/admin/telemetry/${uuid}/latest`);
+}
+
+export async function getAdminMetricHistory(uuid: string, limit = 60) {
+  return apiFetch<MetricHistoryResponse>(`/admin/telemetry/${uuid}/history?limit=${limit}`);
+}
+
 // ── Devices ───────────────────────────────────────────────────────────────────
 export async function getDevices() {
   return apiFetch<Device[]>("/devices/");

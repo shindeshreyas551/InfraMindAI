@@ -8,7 +8,7 @@ import {
   UserCheck, UserX, Key, Trash2, Download, ExternalLink, Sliders
 } from "lucide-react";
 import {
-  getMe, tokenStore, getDevices, Device,
+  getMe, tokenStore, getAdminDevices, Device,
   getAdminOverview, getAdminUsers, toggleDisableUser,
   deleteUser, resetUserPassword, assignDevice, exportAdminReport,
   AdminOverview, UserAdminView
@@ -46,7 +46,7 @@ export default function AdminPortalPage() {
         const [ovData, userData, devData] = await Promise.all([
           getAdminOverview().catch(() => null),
           getAdminUsers().catch(() => []),
-          getDevices().catch(() => []),
+          getAdminDevices().catch(() => []),
         ]);
 
         if (ovData) setOverview(ovData);

@@ -149,11 +149,13 @@ def ingest_metric(db: Session, payload: MetricIngest) -> Metric:
     return saved_metric
 
 
-def get_latest_metric(db: Session, device_uuid: str) -> Metric:
+def get_latest_metric(db: Session, device_uuid: str, owner_id: Optional[int] = None) -> Metric:
     """Return the most recent metric for a device or raise 404."""
     device = device_repository.get_by_uuid(db, device_uuid)
     if not device:
         raise HTTPException(status_code=404, detail=f"Device '{device_uuid}' not found.")
+    if owner_id is not None and device.owner_id != owner_id:
+        raise HTTPException(status_code=403, detail="Access denied: You do not own this device.")
     metric = metric_repository.get_latest_for_device(db, device.id)
     if not metric:
         raise HTTPException(status_code=404, detail="No metrics found for this device yet.")
@@ -161,12 +163,14 @@ def get_latest_metric(db: Session, device_uuid: str) -> Metric:
 
 
 def get_metric_history(
-    db: Session, device_uuid: str, limit: int = 100
+    db: Session, device_uuid: str, limit: int = 100, owner_id: Optional[int] = None
 ) -> MetricHistoryResponse:
     """Return the last N metric snapshots for a device."""
     device = device_repository.get_by_uuid(db, device_uuid)
     if not device:
         raise HTTPException(status_code=404, detail=f"Device '{device_uuid}' not found.")
+    if owner_id is not None and device.owner_id != owner_id:
+        raise HTTPException(status_code=403, detail="Access denied: You do not own this device.")
     metrics = metric_repository.get_history_for_device(db, device.id, limit=limit)
     total = metric_repository.get_by_device_count(db, device.id)
     return MetricHistoryResponse(device_id=device.id, total_stored=total, metrics=metrics)
